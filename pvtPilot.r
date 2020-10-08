@@ -73,14 +73,50 @@ brms_fit4 <- brm(data=df,
                  ))
 summary(brms_fit4)
 
+########################################################################
 
 # Want to compare substantive model fit, so compare WAIC across models
 
-brms_fit1 <- add_criterion(brms_fit1, "waic")
-brms_fit2 <- add_criterion(brms_fit2, "waic")
-brms_fit3 <- add_criterion(brms_fit3, "waic")
-brms_fit4 <- add_criterion(brms_fit4, "waic")
+# Principally want to compare fit0(fixed effects model), fit1(fixed effects with AMPM), fit2(fixed effect for AMPM random intercepts at 
+# level 1 (subject_id)), and fit3 (random intercept and random slope for AMPM at subject_id level) and fit4 (random intercept, and random 
+# effect for within-individual change)
+### Refit models consistent with this order.
+fit0 <- brm(data=df, 
+            family=gaussian(),
+            seed=1337,
+            bf(RTs50 ~ 1 +kssScore)
+            )
+#####
+fit1 <- brm(data=df, 
+            family=gaussian(),
+            seed=1337,
+            bf(RTs50 ~ 1 + kssScore + AMPM)
+            )
+#####
+fit2 <- brm(data=df, 
+            family=gaussian(),
+            seed=1337,
+            bf(RTs50 ~ 1 + kssScore + AMPM + (1 | Subject.ID)
+               )
+            )
+#####
+fit3 <- brm(data=df, 
+            family=gaussian(),
+            seed=1337,
+            bf(RTs50 ~ 1 + kssScore + AMPM + (1 + AMPM | Subject.ID)
+               )
+            )
+#####
+fit4 <- brm(data=df,
+            family=gaussian(),
+            seed=1337,
+            bf(RTs50 ~ 1 + kssScore + AMPM + (1 |s| Subject.ID),
+               sigma ~ 1 + kssScore + (1 |s| Subject.ID))
+            )
+# |s| notation implies that we want to specify that these effects are modelled as correlated. 
 
-w <- loo_compare(brms_fit1, brms_fit2, criterion = "waic")
-print(w)
-print(w, simplify=F)
+model_list <- c(fit0, fit1, fit2, fit3, fit4)
+
+for (i in model_list) {
+  i <- add_criterion(i, "waic")
+}
